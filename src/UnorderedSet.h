@@ -5,6 +5,7 @@
 #ifndef SET_UNORDEREDSET_H
 #define SET_UNORDEREDSET_H
 #include "Set.h"
+#include <initializer_list>
 
 template <typename  T>
 class UnorderedSet : public Set <T> {
@@ -22,6 +23,7 @@ private:
 public:
 
     UnorderedSet() noexcept = default;
+    UnorderedSet(std::initializer_list<T> list) noexcept;
     ~UnorderedSet() noexcept override;
 
 
@@ -37,8 +39,8 @@ public:
 
     [[nodiscard]] auto toString   () const noexcept -> std::string override;
 
-    [[nodiscard]] inline auto empty   () const noexcept -> bool override {return this->size == 0;}
-    [[nodiscard]] inline auto size    () const noexcept -> size_t override {return this->size;}
+    [[nodiscard]] inline auto empty   () const noexcept -> bool override {return this->_size == 0;}
+    [[nodiscard]] inline auto size    () const noexcept -> size_t override {return this->_size;}
 
     template<typename funcType>
     auto filter (funcType const &) noexcept -> UnorderedSet&;
@@ -55,8 +57,8 @@ public:
     template<typename  funcType>
     auto all (funcType const & f) const noexcept -> bool {return this->count(f) == this->size();}
 
-    inline auto begin () const noexcept -> UnorderedSet & {return this->_front;}
-    inline auto end   () const noexcept -> UnorderedSet & {return nullptr;}
+    inline auto begin () const noexcept -> Iterator {return this->_front;}
+    inline auto end   () const noexcept -> Iterator {return nullptr;}
 
 };
 
@@ -71,13 +73,38 @@ public:
 
     Iterator(Node* node) noexcept {this-> node = node;}
 
-    auto operator== (Node const &) const noexcept -> bool;
-    auto operator!= (Node const &) const noexcept -> bool;
+    auto operator== (Iterator const &) const noexcept -> bool;
+    auto operator!= (Iterator const &) const noexcept -> bool;
     auto operator++ () noexcept -> Iterator &;
     auto operator++ (int) noexcept -> Iterator;
     auto operator* () const noexcept -> T &;
 
 };
+
+template<typename T>
+auto UnorderedSet<T>::Iterator::operator==(const UnorderedSet<T>::Iterator & it) const noexcept -> bool {
+    return this->node == it.node;
+}
+
+template<typename T>
+auto UnorderedSet<T>::Iterator::operator!=(const UnorderedSet<T>::Iterator & it) const noexcept -> bool {
+    return !(this->node == it.node);
+}
+
+template<typename T>
+auto UnorderedSet<T>::Iterator::operator++() noexcept -> UnorderedSet<T>::Iterator & {
+    if(this -> node == nullptr)
+        return *this;
+
+    this->node = this->node->next;
+    return *this;
+}
+
+template<typename T>
+auto UnorderedSet<T>::Iterator::operator*() const noexcept -> T & {
+    return this->node->value;
+}
+
 
 template<typename T>
 auto UnorderedSet<T>::insert(const T & value) noexcept -> bool {
@@ -105,13 +132,13 @@ auto UnorderedSet<T>::erase(const T & value) noexcept -> bool {
     while (current->value != value){
         current = current->next;
 
-        if (current == nullptr)
+        if (current->next == nullptr)
             return false;
     }
 
     current->next = current->next->next;
     current->next->value = value;
-    this>_size--;
+    this->_size--;
     return true;
 }
 
@@ -171,6 +198,22 @@ UnorderedSet<T>::~UnorderedSet() noexcept {
         current = current->next;
         delete temp;
     }
+}
+
+template<typename T>
+UnorderedSet<T>::UnorderedSet(std::initializer_list<T> list) noexcept {
+    for(auto it : list)
+        this->insert(it);
+}
+
+template<typename T>
+template<typename funcType>
+auto UnorderedSet<T>::count(const funcType & f) const noexcept -> size_t {
+    size_t count;
+    for (auto it : this)
+        if(f(it))
+            count ++;
+    return count;
 }
 
 
