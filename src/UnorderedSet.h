@@ -9,7 +9,7 @@
 
 template <typename  T>
 class UnorderedSet : public Set <T> {
-private:
+protected:
 
     struct Node {
         T value;
@@ -71,7 +71,7 @@ private:
 
 public:
 
-    Iterator(Node* node) noexcept {this-> node = node;}
+    explicit Iterator(Node* node) noexcept {this-> node = node;}
 
     auto operator== (Iterator const &) const noexcept -> bool;
     auto operator!= (Iterator const &) const noexcept -> bool;
@@ -103,6 +103,15 @@ auto UnorderedSet<T>::Iterator::operator++() noexcept -> UnorderedSet<T>::Iterat
 template<typename T>
 auto UnorderedSet<T>::Iterator::operator*() const noexcept -> T & {
     return this->node->value;
+}
+
+template<typename T>
+auto UnorderedSet<T>::Iterator::operator++(int) noexcept -> UnorderedSet<T>::Iterator {
+    if (this -> node == nullptr)
+        return *this;
+
+    this->node = this->node->next;
+    return this;
 }
 
 
@@ -161,13 +170,13 @@ auto UnorderedSet<T>::reunite(const Set<T> & set) noexcept -> UnorderedSet & {
 }
 
 template<typename T>
-auto UnorderedSet<T>::intersect(const Set<T> &set) noexcept -> UnorderedSet & {
+auto UnorderedSet<T>::intersect(const Set<T> & set) noexcept -> UnorderedSet & {
 
     return *this;
 }
 
 template<typename T>
-auto UnorderedSet<T>::subtract(const Set<T> &set) noexcept -> UnorderedSet & {
+auto UnorderedSet<T>::subtract(const Set<T> & set) noexcept -> UnorderedSet & {
 
     return *this;
 }
@@ -185,7 +194,6 @@ auto UnorderedSet<T>::toString() const noexcept -> std::string {
         out << it << ", ";
 
     out << " ]";
-
     return std::string(out.str());
 }
 
@@ -216,5 +224,21 @@ auto UnorderedSet<T>::count(const funcType & f) const noexcept -> size_t {
     return count;
 }
 
+template<typename T>
+template<typename funcType>
+auto UnorderedSet<T>::filter(const funcType & f) noexcept -> UnorderedSet & {
+    for(auto it : this)
+        if(f(it))
+            it.erase();
+
+    return this;
+}
+
+template<typename T>
+template<typename funcType>
+auto UnorderedSet<T>::foreach(const funcType & f) const noexcept -> void {
+    for(auto it : this)
+        it = f(it);
+}
 
 #endif //SET_UNORDEREDSET_H
