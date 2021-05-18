@@ -33,9 +33,6 @@ protected:
 
     Set() noexcept = default;
     virtual  ~Set() noexcept = default;
-
 };
-
-
 
 #endif //SET_SET_H
