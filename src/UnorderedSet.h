@@ -9,33 +9,27 @@
 
 template <typename  T>
 class UnorderedSet : public Set <T> {
-protected:
-
-    struct Node {
-        T value;
-        Node *next;
-    };
-
-    Node * _front = nullptr;
-    size_t _size = 0u;
-    friend class Iterator;
-
+private:
+    using Node = typename  Set<T> :: Node;  /// typename forces the compiler to generate Set<T> class
 public:
 
     UnorderedSet() noexcept = default;
     UnorderedSet(std::initializer_list<T> list) noexcept;
+    UnorderedSet( UnorderedSet&) noexcept;
     ~UnorderedSet() noexcept override;
 
-
-    class Iterator;
 
     auto insert     (T const &) noexcept -> bool override;
     auto erase      (T const &) noexcept -> bool override;
     auto contains   (T const &) noexcept -> bool override;
 
+    auto reunion (UnorderedSet const &) const noexcept -> UnorderedSet;
+
     auto reunite    (Set<T> const &) noexcept -> UnorderedSet & override;
     auto intersect  (Set<T> const &) noexcept -> UnorderedSet & override;
     auto subtract   (Set<T> const &) noexcept -> UnorderedSet & override;
+
+    auto clear () noexcept -> void override;
 
     [[nodiscard]] auto toString   () const noexcept -> std::string override;
 
@@ -57,63 +51,12 @@ public:
     template<typename  funcType>
     auto all (funcType const & f) const noexcept -> bool {return this->count(f) == this->size();}
 
-    inline auto begin () const noexcept -> Iterator {return this->_front;}
-    inline auto end   () const noexcept -> Iterator {return nullptr;}
+    auto operator=(Set<T> const &) noexcept -> UnorderedSet& override;
 
+    inline UnorderedSet& operator=(UnorderedSet<T> const & o) noexcept {
+        return this->operator=((Set<T> const &) o);
+    }
 };
-
-template<typename  T>
-class UnorderedSet<T> :: Iterator{
-private:
-
-    using Node = UnorderedSet<T>::Node;
-    Node mutable *node ;
-
-public:
-
-    explicit Iterator(Node* node) noexcept {this-> node = node;}
-
-    auto operator== (Iterator const &) const noexcept -> bool;
-    auto operator!= (Iterator const &) const noexcept -> bool;
-    auto operator++ () noexcept -> Iterator &;
-    auto operator++ (int) noexcept -> Iterator;
-    auto operator* () const noexcept -> T &;
-
-};
-
-template<typename T>
-auto UnorderedSet<T>::Iterator::operator==(const UnorderedSet<T>::Iterator & it) const noexcept -> bool {
-    return this->node == it.node;
-}
-
-template<typename T>
-auto UnorderedSet<T>::Iterator::operator!=(const UnorderedSet<T>::Iterator & it) const noexcept -> bool {
-    return !(this->node == it.node);
-}
-
-template<typename T>
-auto UnorderedSet<T>::Iterator::operator++() noexcept -> UnorderedSet<T>::Iterator & {
-    if(this -> node == nullptr)
-        return *this;
-
-    this->node = this->node->next;
-    return *this;
-}
-
-template<typename T>
-auto UnorderedSet<T>::Iterator::operator*() const noexcept -> T & {
-    return this->node->value;
-}
-
-template<typename T>
-auto UnorderedSet<T>::Iterator::operator++(int) noexcept -> UnorderedSet<T>::Iterator {
-    if (this -> node == nullptr)
-        return *this;
-
-    this->node = this->node->next;
-    return this;
-}
-
 
 template<typename T>
 auto UnorderedSet<T>::insert(const T & value) noexcept -> bool {
@@ -159,29 +102,45 @@ auto UnorderedSet<T>::contains(const T & value) noexcept -> bool {
             return true;
         current = current->next;
     }
-
     return false;
 }
 
 template<typename T>
 auto UnorderedSet<T>::reunite(const Set<T> & set) noexcept -> UnorderedSet & {
+    if(set.empty())
+        return *this;
 
+    for (const auto &item : set)
+        if(!this->contains(item))
+            this->insert(item);
     return *this;
 }
 
 template<typename T>
 auto UnorderedSet<T>::intersect(const Set<T> & set) noexcept -> UnorderedSet & {
+    if(set.empty())
+        return *this;
 
+    for (const auto &item : set)
+        if(!this->contains(item))
+            this->erase(item);
     return *this;
 }
 
 template<typename T>
 auto UnorderedSet<T>::subtract(const Set<T> & set) noexcept -> UnorderedSet & {
+    if(set.empty())
+        return *this;
 
+    for (const auto &item : set)
+        if(this->contains(item))
+            this->erase(item);
     return *this;
 }
 
 #include <sstream>
+#include <iostream>
+
 template<typename T>
 auto UnorderedSet<T>::toString() const noexcept -> std::string {
     if(this->empty())
@@ -192,20 +151,14 @@ auto UnorderedSet<T>::toString() const noexcept -> std::string {
 
     for(auto it : *this)
         out << it << ", ";
+    auto s = out.str();
 
-    out << " ]";
-    return std::string(out.str());
+    return s.substr(0,s.size() - 2).append(" ]");
 }
 
 template<typename T>
 UnorderedSet<T>::~UnorderedSet() noexcept {
-    auto current = this->_front;
-
-    while (current != nullptr){
-        auto temp = current;
-        current = current->next;
-        delete temp;
-    }
+    this->clear();
 }
 
 template<typename T>
@@ -227,7 +180,7 @@ auto UnorderedSet<T>::count(const funcType & f) const noexcept -> size_t {
 template<typename T>
 template<typename funcType>
 auto UnorderedSet<T>::filter(const funcType & f) noexcept -> UnorderedSet & {
-    for(auto it : this)
+    for(auto &it : this)
         if(f(it))
             it.erase();
 
@@ -239,6 +192,42 @@ template<typename funcType>
 auto UnorderedSet<T>::foreach(const funcType & f) const noexcept -> void {
     for(auto & it : this)
         f(it);
+}
+
+template<typename T>
+auto UnorderedSet<T>::reunion(const UnorderedSet & set) const noexcept -> UnorderedSet {
+
+    UnorderedSet<T> result(this);
+    result.reunite(set);
+    return UnorderedSet();
+}
+
+template<typename T>
+UnorderedSet<T>::UnorderedSet(UnorderedSet & set) noexcept {
+    for (const auto &item : set)
+        this->insert(item);
+}
+
+template<typename T>
+auto UnorderedSet<T>::operator=(Set<T> const & set) noexcept -> UnorderedSet& {
+    /// clear lvalue then copy rvalue in lvalue
+    this->clear();
+
+    for (const auto &item : set)
+        this->insert(item);
+
+    return *this;
+}
+
+template<typename T>
+auto UnorderedSet<T>::clear() noexcept -> void {
+    auto current = this->_front;
+
+    while (current != nullptr){
+        auto temp = current;
+        current = current->next;
+        delete temp;
+    }
 }
 
 #endif //SET_UNORDEREDSET_H
