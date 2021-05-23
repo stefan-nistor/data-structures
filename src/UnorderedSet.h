@@ -10,7 +10,8 @@
 template <typename  T>
 class UnorderedSet : public Set <T> {
 private:
-    using Node = typename  Set<T> :: Node;  /// typename forces the compiler to generate Set<T> class
+    /// typename forces the compiler to generate Set<T> class
+    using Node = typename  Set<T> :: Node;
 public:
 
     UnorderedSet() noexcept = default;

@@ -3,4 +3,4 @@ project(set)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(set main.cpp src/Set.cpp src/Set.h src/UnorderedSet.cpp src/UnorderedSet.h)
+add_executable(set main.cpp src/Set.h src/UnorderedSet.h src/OrderedSet.h)
